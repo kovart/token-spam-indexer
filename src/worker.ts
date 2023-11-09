@@ -35,7 +35,7 @@ import { setupDatabase, setupProvider } from './setup';
 
 const config: Config = workerData.config;
 const tokenMap: Map<string, TokenContract> = workerData.tokenMap;
-const MAX_LOGS_PER_TOKEN = 100;
+const MAX_TOKEN_LOGS_PER_BLOCK = 100;
 
 let isShutdown = false;
 
@@ -90,7 +90,7 @@ async function processBlock(
     const logCount = logCountByToken.get(key) || 0;
     logCountByToken.set(key, logCount + 1);
 
-    if (logCount >= MAX_LOGS_PER_TOKEN) {
+    if (logCount >= MAX_TOKEN_LOGS_PER_BLOCK) {
       continue;
     }
 
