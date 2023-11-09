@@ -1,0 +1,10 @@
+node_modules
+dist
+
+.idea
+.vscode
+
+.env
+storage.db
+
+data
