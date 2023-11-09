@@ -96,7 +96,7 @@ async function main() {
     endBlock: dataContainer.endBlock,
   };
 
-  let prevCheckIn = -1;
+  let prevSaveAt = -1;
 
   for (let i = 0; i < threads; i++) {
     const workerPath = path.resolve(__dirname, './worker.ts');
@@ -147,9 +147,10 @@ async function main() {
 
         if (
           message.payload.blockNumber === dataContainer.endBlock ||
-          Date.now() - prevCheckIn >= 10e3
+          Date.now() - prevSaveAt >= 5e3
         ) {
           saveState();
+          prevSaveAt = Date.now();
         }
 
         let totalEta = 0;
@@ -168,7 +169,6 @@ async function main() {
         const eta = estimator.formatEta(averageEta);
         const blocksPerSecond = Math.floor(1 / (averageBlockTime / 1000));
         const range = `${state.lastProcessedBlock}/${dataContainer.endBlock}`;
-        prevCheckIn = Date.now();
         console.log(
           `[${eta}] [${blocksPerSecond}B/s] [${range}] ` +
             `Block processed: #${message.payload.blockNumber}. ` +
