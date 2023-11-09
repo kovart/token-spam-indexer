@@ -636,7 +636,7 @@ class SqlDatabaseSimplified {
   addErc1155TransferBatchEvent(event: TokenInsertEvent<DetailedErc1155TransferBatchEvent>) {
     return this.run(
       `
-        INSERT OR IGNORE INTO erc_1155_transfer_batch_events(transaction_hash, log_index, contract_id, operator_id, from_id, to_id, token_ids, token_values)
+        INSERT OR IGNORE INTO erc_1155_transfer_batch_events(transaction_hash, log_index, contract_id, operator_address, from_address, to_address, token_ids, token_values)
         VALUES ( 
             $transaction_hash,
             $log_index,
