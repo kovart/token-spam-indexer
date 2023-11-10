@@ -97,6 +97,9 @@ async function main() {
   };
 
   let prevSaveAt = -1;
+  let prevLogAt = -1;
+  let intervalLogs = 0;
+  let intervalTxs = 0;
 
   for (let i = 0; i < threads; i++) {
     const workerPath = path.resolve(__dirname, './worker.ts');
@@ -118,7 +121,7 @@ async function main() {
 
         if (availableRange.endBlock - availableRange.startBlock <= 0) {
           console.warn(`No more data to process`);
-          console.warn(`Unref worker #${worker.threadId}}`);
+          console.warn(`Unref worker #${worker.threadId - 1}}`);
           worker.unref();
         }
 
@@ -149,32 +152,43 @@ async function main() {
           message.payload.blockNumber === dataContainer.endBlock ||
           Date.now() - prevSaveAt >= 5e3
         ) {
-          saveState();
           prevSaveAt = Date.now();
+
+          saveState();
         }
 
-        let totalEta = 0;
-        for (const estimator of estimators) {
-          totalEta += estimator.getEtaInMs(dataContainer.endBlock - state.lastProcessedBlock);
+        intervalLogs += message.payload.logs
+        intervalTxs += message.payload.transactions
+
+        if(Date.now() - prevLogAt >= 1e3) {
+          prevLogAt = Date.now();
+
+          let totalEta = 0;
+          for (const estimator of estimators) {
+            totalEta += estimator.getEtaInMs(dataContainer.endBlock - state.lastProcessedBlock);
+          }
+
+          let totalAvgBlockTime = 0;
+          for (const estimator of estimators) {
+            totalAvgBlockTime += estimator.avgBlockTime();
+          }
+
+          const averageEta = totalEta / estimators.length / threads;
+          const averageBlockTime = totalAvgBlockTime / estimators.length / threads;
+
+          const eta = estimator.formatEta(averageEta);
+          const blocksPerSecond = Math.floor(1 / (averageBlockTime / 1000));
+          const range = `${state.lastProcessedBlock}/${dataContainer.endBlock}`;
+          console.log(
+            `[${eta}] [${blocksPerSecond}B/s] [${range}] ` +
+            `Current block: #${message.payload.blockNumber}. ` +
+            `Logs: ${intervalLogs}. ` +
+            `Txs: ${intervalTxs}`,
+          );
+
+          intervalLogs = 0
+          intervalTxs = 0
         }
-
-        let totalAvgBlockTime = 0;
-        for (const estimator of estimators) {
-          totalAvgBlockTime += estimator.avgBlockTime();
-        }
-
-        const averageEta = totalEta / estimators.length / threads;
-        const averageBlockTime = totalAvgBlockTime / estimators.length / threads;
-
-        const eta = estimator.formatEta(averageEta);
-        const blocksPerSecond = Math.floor(1 / (averageBlockTime / 1000));
-        const range = `${state.lastProcessedBlock}/${dataContainer.endBlock}`;
-        console.log(
-          `[${eta}] [${blocksPerSecond}B/s] [${range}] ` +
-            `Block processed: #${message.payload.blockNumber}. ` +
-            `Logs: ${message.payload.logs}. ` +
-            `Txs: ${message.payload.transactions}`,
-        );
       }
     });
 
@@ -185,7 +199,7 @@ async function main() {
 
     worker.on('exit', (code: number) => {
       if (code !== 0) {
-        console.error(`Worker #${worker.threadId} stopped with exit code ${code}`);
+        console.error(`Worker #${worker.threadId - 1} stopped with exit code ${code}`);
       }
     });
   }
